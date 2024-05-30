@@ -62,12 +62,22 @@ ShaderProgram *sp;
 
 const glm::vec3 treepos[] = {
 	{2,4,0.02},
-	{0,0.7,0.02},
-	{-2,-3,0.02},
-	{-3,2,0.02},
-	{0.5,-1,0.02}
+	{2.1,4,0.02},
+	{2.2,4.1,0.02},
+	{2.1,4.05,0.02},
+	{2.4,3.8,0.02},
+	{0.5,2.7,0.02},
+	{0.5,2.8,0.02},
+	{0.4,2.7,0.02},
+	{0.3,2.9,0.02},
+	{-2,-3,0.06},
+	{-2.1,-3.33,0.06},
+	{-2.07,-3.5,0.06},
+	{-2.2,-3.9,0.06},
+	{-1.8,-3.3,0.05},
+	{-2.4,-3.2,0.05},
+	{-3.3,2.2,0.06},
 };
-
 
 //Odkomentuj, żeby rysować kostkę
 //float* vertices = myCubeVertices;
@@ -99,9 +109,11 @@ std::vector<MeshData> meshes_tree;
 
 GLuint texWulkan;
 GLuint texLava;
+GLuint texLavaLight;
 GLuint texNiebo;
 GLuint texRex;
 GLuint texTree;
+
 
 void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 {
@@ -213,7 +225,8 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
 
 	texWulkan = readTexture("Wulkan_ColorMap.png");
-	texLava = readTexture("m.png");
+	texLava = readTexture("mlawa.png");
+	texLavaLight = readTexture("mlawa_lightmap.png");
 	texNiebo = readTexture("sky.png");
 	texRex = readTexture("trex_diff.png");
 	texTree = readTexture("Ramas Nieve.png");
@@ -259,6 +272,7 @@ void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, G
 	}
 }
 
+
 //Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -301,8 +315,8 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
 	draw_mesh_textured(meshes_trex, texRex, 0);
 
-	for (int i=0; i<5; i++){
-		glm::mat4 Mtree = glm::translate(M, treepos[i]); // Adjust position if needed
+	for (const auto& tree : treepos){
+		glm::mat4 Mtree = glm::translate(M, tree); // Adjust position if needed
 		Mtree = glm::scale(Mtree, glm::vec3(0.05f));
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
 		draw_mesh_textured(meshes_tree, texTree, 0);	
