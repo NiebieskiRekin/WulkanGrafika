@@ -1,0 +1,15 @@
+﻿  main_file.cpp
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(200,30): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(272,89): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(296,89): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(319,89): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(343,89): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(417,37): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\main_file.cpp(418,37): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+  Generating code
+  2 of 667 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    3 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\x64\Release\vc120.pdb'; linking object as if no debug info
+  gkiw_st_11a_win.vcxproj -> C:\Users\kamie\Downloads\wulkan\gkiw_st_11a_win\x64\Release\gkiw_st_11a_win.exe
