@@ -60,6 +60,14 @@ float lastFrame = 0.0f;
 
 ShaderProgram *sp;
 
+const glm::vec3 treepos[] = {
+	{2,4,0.02},
+	{0,0.7,0.02},
+	{-2,-3,0.02},
+	{-3,2,0.02},
+	{0.5,-1,0.02}
+};
+
 
 //Odkomentuj, żeby rysować kostkę
 //float* vertices = myCubeVertices;
@@ -205,7 +213,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
 
 	texWulkan = readTexture("Wulkan_ColorMap.png");
-	texLava = readTexture("sky.png");
+	texLava = readTexture("m.png");
 	texNiebo = readTexture("sky.png");
 	texRex = readTexture("trex_diff.png");
 	texTree = readTexture("Ramas Nieve.png");
@@ -227,7 +235,29 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	glDeleteTextures(1, &texWulkan);
 }
 
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0){
+	glUniform1i(sp->u("textureMap0"), v0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
 
+	// Draw first model
+	for (const MeshData& mesh : mesh_vec) {
+		glEnableVertexAttribArray(sp->a("vertex"));
+		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
+
+		glEnableVertexAttribArray(sp->a("normal"));
+		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
+
+		glEnableVertexAttribArray(sp->a("texCoord0"));
+		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
+
+		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
+
+		glDisableVertexAttribArray(sp->a("vertex"));
+		glDisableVertexAttribArray(sp->a("normal"));
+		glDisableVertexAttribArray(sp->a("texCoord0"));
+	}
+}
 
 //Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
@@ -239,7 +269,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glm::vec3(0.0f, 1.0f, 0.0f));
 
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.1f, 50.0f);
-
+	
 	glm::mat4 M = glm::mat4(1.0f);
 	M = glm::rotate(M, glm::radians(-90.0f), glm::vec3(1.0f, 0, 0));
 	M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -250,128 +280,33 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-	glUniform1i(sp->u("textureMap0"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texWulkan);
-
 	glUniform1i(sp->u("textureMap1"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texNiebo);
+	
+	draw_mesh_textured(meshes_floor, texWulkan, 0);
 
-	// Draw first model
-	for (const MeshData& mesh : meshes_vulkan) {
-		glEnableVertexAttribArray(sp->a("vertex"));
-		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
+	glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
+	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
+	draw_mesh_textured(meshes_lava, texLava,0);	
 
-		glEnableVertexAttribArray(sp->a("normal"));
-		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
+	glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
+	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
+	draw_mesh_textured(meshes_vulkan, texWulkan, 0);
 
-		glEnableVertexAttribArray(sp->a("texCoord0"));
-		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
+	glm::mat4 Mtrex  = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
+	Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
+	Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
+	Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
+	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
+	draw_mesh_textured(meshes_trex, texRex, 0);
 
-		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-		glDisableVertexAttribArray(sp->a("vertex"));
-		glDisableVertexAttribArray(sp->a("normal"));
-		glDisableVertexAttribArray(sp->a("texCoord0"));
+	for (int i=0; i<5; i++){
+		glm::mat4 Mtree = glm::translate(M, treepos[i]); // Adjust position if needed
+		Mtree = glm::scale(Mtree, glm::vec3(0.05f));
+		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
+		draw_mesh_textured(meshes_tree, texTree, 0);	
 	}
-
-	glUniform1i(sp->u("textureMap0"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texLava);
-
-	// Draw third model (lava.fbx)
-	//M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, .0f, 0.0f)); // Adjust position if needed
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	for (const MeshData& mesh : meshes_lava) {
-		glEnableVertexAttribArray(sp->a("vertex"));
-		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
-
-		glEnableVertexAttribArray(sp->a("normal"));
-		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
-
-		glEnableVertexAttribArray(sp->a("texCoord0"));
-		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
-
-		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-		glDisableVertexAttribArray(sp->a("vertex"));
-		glDisableVertexAttribArray(sp->a("normal"));
-		glDisableVertexAttribArray(sp->a("texCoord0"));
-	}
-
-	glUniform1i(sp->u("textureMap0"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texWulkan);
-	// Draw third model (floor.fbx)
-	M = glm::scale(M, glm::vec3(0.99f, 0.99f, 0.99f)); // Adjust position if needed
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	for (const MeshData& mesh : meshes_floor) {
-		glEnableVertexAttribArray(sp->a("vertex"));
-		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
-
-		glEnableVertexAttribArray(sp->a("normal"));
-		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
-
-		glEnableVertexAttribArray(sp->a("texCoord0"));
-		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
-
-		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-		glDisableVertexAttribArray(sp->a("vertex"));
-		glDisableVertexAttribArray(sp->a("normal"));
-		glDisableVertexAttribArray(sp->a("texCoord0"));
-	}
-
-	glUniform1i(sp->u("textureMap0"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texRex);
-	// Draw fourth model (dino.fbx)
-	M = glm::translate(glm::mat4(1.0f), glm::vec3(0.99f, 0, 0)); // Adjust position if needed
-	M = glm::rotate(M, glm::radians(180.0f), glm::vec3(0, 1.0f, 0));
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	for (const MeshData& mesh : meshes_trex) {
-		glEnableVertexAttribArray(sp->a("vertex"));
-		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
-
-		glEnableVertexAttribArray(sp->a("normal"));
-		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
-
-		glEnableVertexAttribArray(sp->a("texCoord0"));
-		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
-
-		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-		glDisableVertexAttribArray(sp->a("vertex"));
-		glDisableVertexAttribArray(sp->a("normal"));
-		glDisableVertexAttribArray(sp->a("texCoord0"));
-	}
-
-
-	//glUniform1i(sp->u("textureMap0"), 0);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, texTree);
-	//// Draw fourth model (floor.fbx)
-	//M = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0, 0));
-	//M = glm::translate(M, glm::vec3(-.0f, 1, -2)); // Adjust position if needed
-	//M = glm::scale(M, glm::vec3(0.1f, 0.1f, 0.1f)); // Adjust position if needed
-	//glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	//for (const MeshData& mesh : meshes_tree) {
-	//	glEnableVertexAttribArray(sp->a("vertex"));
-	//	glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
-
-	//	glEnableVertexAttribArray(sp->a("normal"));
-	//	glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
-
-	//	glEnableVertexAttribArray(sp->a("texCoord0"));
-	//	glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
-
-	//	glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-	//	glDisableVertexAttribArray(sp->a("vertex"));
-	//	glDisableVertexAttribArray(sp->a("normal"));
-	//	glDisableVertexAttribArray(sp->a("texCoord0"));
-	//}
 
 	glfwSwapBuffers(window);
 }
