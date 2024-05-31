@@ -1,0 +1,8 @@
+# koniecznie
+.vs/* 
+# dodatkowo, przyśpiesza działanie gita 
+assimp/*
+assimp-*
+glew/*
+glfw/*
+glm/*
