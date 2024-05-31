@@ -1,0 +1,6 @@
+.vs/*
+assimp/*
+assimp-*
+glew/*
+glfw/*
+glm/*
