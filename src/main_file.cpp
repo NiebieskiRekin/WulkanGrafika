@@ -154,6 +154,8 @@ std::chrono::steady_clock::time_point lastUpdateTime =
     std::chrono::steady_clock::now();
 
 
+const glm::vec3 start_pos_particle = glm::vec3(0,0,1.5);
+
 struct Particle {
   glm::vec3 position;
   glm::vec3 velocity;
@@ -165,7 +167,7 @@ struct Particle {
   }
 
   Particle() {
-    position = glm::vec3(0,0,1.5);
+    position = start_pos_particle;
     velocity = glm::vec3(0);
   }
 };
@@ -215,19 +217,22 @@ void updateParticles(float deltaTime) {
 
   for (int i=0; i<newparticles; i++){
     size_t p = findUnusedParticle();
-    particles[p].lifespan = 5.0f; // 5s
-    particles[p].velocity = glm::vec3(0.0, 0.0f, 0.1f);
+    particles[p].lifespan = 1.0f; // 1s
+    particles[p].velocity = glm::vec3(0.0, 0.0f, (float)i/newparticles);
   }  
 
   size_t c = 0; //count
   for (auto& p : particles){
     if (p.lifespan < 0.0f){
+    	p.position = start_pos_particle;
       continue;
     }
 
     p.lifespan -= deltaTime;
+    std::cout << p.lifespan << std::endl;
   
     if (p.lifespan < 0.0f){
+    	p.position = start_pos_particle;
       p.distanceToCamera = -1.0f;
       c++;
       continue;
