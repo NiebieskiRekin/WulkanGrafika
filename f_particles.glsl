@@ -1,9 +1,12 @@
 #version 330 core
 
-uniform vec4 particleColor;
+in vec2 UV;
+in vec4 color_particle;
 
-out vec4 FragColor;
+uniform sampler2D particle_tex;
+
+out vec4 color;
 
 void main() {
-    FragColor = particleColor;
+    color = texture(particle_tex, UV) * color_particle;    
 }
