@@ -17,6 +17,7 @@ jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
 Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 */
 
+#include <glm/ext/matrix_transform.hpp>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
 
@@ -31,6 +32,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "lodepng.h"
 #include "shaderprogram.h"
 
+#include <chrono>
+
 #include <iostream>
 #include <vector>
 
@@ -38,58 +41,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-float speed_x=0;
-float speed_y=0;
-float aspectRatio=1;
-
-// Camera settings
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-bool firstMouse = true;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float lastX = 400.0f, lastY = 300.0f;
-float fov = 45.0f;
-
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-
 ShaderProgram *sp;
-
-const glm::vec3 treepos[] = {
-	{2,4,0.02},
-	{2.1,4,0.02},
-	{2.2,4.1,0.02},
-	{2.1,4.05,0.02},
-	{2.4,3.8,0.02},
-	{0.5,2.7,0.02},
-	{0.5,2.8,0.02},
-	{0.4,2.7,0.02},
-	{0.3,2.9,0.02},
-	{-2,-3,0.06},
-	{-2.1,-3.33,0.06},
-	{-2.07,-3.5,0.06},
-	{-2.2,-3.9,0.06},
-	{-1.8,-3.3,0.05},
-	{-2.4,-3.2,0.05},
-	{-3.3,2.2,0.06},
-};
-
-//Odkomentuj, żeby rysować kostkę
-//float* vertices = myCubeVertices;
-//float* normals = myCubeNormals;
-//float* texCoords = myCubeTexCoords;
-//float* colors = myCubeColors;
-//int vertexCount = myCubeVertexCount;
-
-
-////Odkomentuj, żeby rysować czajnik
-//float* vertices = myTeapotVertices;
-//float* normals = myTeapotVertexNormals;
-//float* texCoords = myTeapotTexCoords;
-// float* colors = myTeapotColors;
-//int vertexCount = myTeapotVertexCount;
 
 struct MeshData {
 	std::vector<glm::vec4> vertices;
@@ -103,6 +55,7 @@ std::vector<MeshData> meshes_lava;
 std::vector<MeshData> meshes_floor;
 std::vector<MeshData> meshes_trex;
 std::vector<MeshData> meshes_tree;
+std::vector<MeshData> meshes_kostka;
 
 GLuint texWulkan;
 GLuint texLava;
@@ -110,6 +63,7 @@ GLuint texLavaLight;
 GLuint texNiebo;
 GLuint texRex;
 GLuint texTree;
+GLuint texKostka;
 
 
 void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
@@ -155,6 +109,190 @@ void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 
 	cout << "Model loaded!" << endl;
 }
+
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0){
+	glUniform1i(sp->u("textureMap0"), v0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	// Draw first model
+	for (const MeshData& mesh : mesh_vec) {
+		glEnableVertexAttribArray(sp->a("vertex"));
+		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
+
+		glEnableVertexAttribArray(sp->a("normal"));
+		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
+
+		glEnableVertexAttribArray(sp->a("texCoord0"));
+		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
+
+		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
+
+		glDisableVertexAttribArray(sp->a("vertex"));
+		glDisableVertexAttribArray(sp->a("normal"));
+		glDisableVertexAttribArray(sp->a("texCoord0"));
+	}
+}
+
+float speed_x=0;
+float speed_y=0;
+float aspectRatio=1;
+
+// Camera settings
+
+
+glm::vec3 cameraPos = glm::vec3(0, 1, -5);
+bool firstMouse = true;
+float yaw = -90.0f;
+float pitch = 0.0f;
+float lastX = 400.0f, lastY = 300.0f;
+float fov = 45.0f;
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+std::chrono::steady_clock::time_point lastUpdateTime =
+    std::chrono::steady_clock::now();
+
+
+struct Particle {
+  glm::vec3 position;
+  glm::vec3 velocity;
+  float lifespan = -1.0f; // Remaining lifespan of the particle
+  float distanceToCamera = -1.0f;
+
+  bool operator<(const Particle &other) const {
+    return other.distanceToCamera < this->distanceToCamera;
+  }
+
+  Particle() {
+    position = glm::vec3(0,0,1.5);
+    velocity = glm::vec3(0);
+  }
+};
+
+const size_t PARTICLES_SIZE = 10;
+std::vector<Particle> particles = std::vector<Particle>(PARTICLES_SIZE);
+size_t lastUsedParticle = 0;
+std::vector<glm::vec3> particles_position_data = std::vector<glm::vec3>(PARTICLES_SIZE); 
+
+size_t findUnusedParticle() {
+
+  // ┌─┬─┬─┬─┬─┬─┐
+  // │x│x│x│ │ │ │
+  // └─┴─┴─┴─┴─┴─┘
+  //      ^
+  //      last used, move forward in the array
+  for (size_t i = lastUsedParticle; i < particles.size(); i++) {
+    if (particles[i].lifespan < 0) {
+      lastUsedParticle = i;
+      return i;
+    }
+  }
+
+  // ┌─┬─┬─┬─┬─┬─┐
+  // │ │ │x│x│x│x│
+  // └─┴─┴─┴─┴─┴─┘
+  //  ^         ^
+  //  │        last used, move back to start
+  //  │
+  //  │         │
+  //  └─────────┘
+
+  for (size_t i = 0; i < lastUsedParticle; i++) {
+    if (particles[i].lifespan < 0) {
+      lastUsedParticle = i;
+      return i;
+    }
+  }
+
+  // No free particles
+  return 0;
+}
+
+// Function to update particles
+void updateParticles(float deltaTime) {
+  int newparticles = 10;
+
+  for (int i=0; i<newparticles; i++){
+    size_t p = findUnusedParticle();
+    particles[p].lifespan = 5.0f; // 5s
+    particles[p].velocity = glm::vec3(0.0, 0.0f, 0.1f);
+  }  
+
+  size_t c = 0; //count
+  for (auto& p : particles){
+    if (p.lifespan < 0.0f){
+      continue;
+    }
+
+    p.lifespan -= deltaTime;
+  
+    if (p.lifespan < 0.0f){
+      p.distanceToCamera = -1.0f;
+      c++;
+      continue;
+    }
+
+    // velocity...
+    p.position += p.velocity * deltaTime;
+
+    p.distanceToCamera = glm::length(p.position - cameraPos);
+    p.distanceToCamera *= p.distanceToCamera; // distance squared
+
+    particles_position_data[c] = p.position;
+    c++; }
+}
+
+void drawParticles(double deltaTime,const glm::mat4& M){
+	
+  updateParticles(deltaTime);  
+
+	// std::sort(particles.begin(), particles.end());
+
+	for (auto& p : particles_position_data){
+		glm::mat4 Mkostka = glm::translate(M, p);
+		Mkostka = glm::scale(Mkostka,glm::vec3(0.05));
+		// std::cout << Mkostka[0][0] << " " << Mkostka[1][1] << " " << Mkostka[2][2] << " "<< Mkostka[3][3] << std::endl;
+		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mkostka));
+		draw_mesh_textured(meshes_kostka, texKostka, 0);		
+	}
+	
+}
+
+const glm::vec3 treepos[] = {
+	{2,4,0.02},
+	{2.1,4,0.02},
+	{2.2,4.1,0.02},
+	{2.1,4.05,0.02},
+	{2.4,3.8,0.02},
+	{0.5,2.7,0.02},
+	{0.5,2.8,0.02},
+	{0.4,2.7,0.02},
+	{0.3,2.9,0.02},
+	{-2,-3,0.06},
+	{-2.1,-3.33,0.06},
+	{-2.07,-3.5,0.06},
+	{-2.2,-3.9,0.06},
+	{-1.8,-3.3,0.05},
+	{-2.4,-3.2,0.05},
+	{-3.3,2.2,0.06},
+};
+
+//Odkomentuj, żeby rysować kostkę
+//float* vertices = myCubeVertices;
+//float* normals = myCubeNormals;
+//float* texCoords = myCubeTexCoords;
+//float* colors = myCubeColors;
+//int vertexCount = myCubeVertexCount;
+
+
+////Odkomentuj, żeby rysować czajnik
+//float* vertices = myTeapotVertices;
+//float* normals = myTeapotVertexNormals;
+//float* texCoords = myTeapotTexCoords;
+// float* colors = myTeapotColors;
+//int vertexCount = myTeapotVertexCount;
+
 
 
 
@@ -227,12 +365,14 @@ void initOpenGLProgram(GLFWwindow* window) {
 	texNiebo = readTexture("../assets/textures/sky.png");
 	texRex = readTexture("../assets/textures/trex_diff.png");
 	texTree = readTexture("../assets/textures/Ramas Nieve.png");
+	texKostka = readTexture("../assets/textures/PINK_PLACEHOLDER.png");
 
 	loadModel("../assets/models/wulkan.fbx", meshes_vulkan);
 	loadModel("../assets/models/lava.fbx", meshes_lava);
 	loadModel("../assets/models/floor.fbx", meshes_floor);
 	loadModel("../assets/models/trex.fbx", meshes_trex);
 	loadModel("../assets/models/SnowTree.fbx", meshes_tree);
+	loadModel("../assets/models/kostka.fbx", meshes_kostka);
 }
 
 
@@ -245,37 +385,14 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	glDeleteTextures(1, &texWulkan);
 }
 
-void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0){
-	glUniform1i(sp->u("textureMap0"), v0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	// Draw first model
-	for (const MeshData& mesh : mesh_vec) {
-		glEnableVertexAttribArray(sp->a("vertex"));
-		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
-
-		glEnableVertexAttribArray(sp->a("normal"));
-		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
-
-		glEnableVertexAttribArray(sp->a("texCoord0"));
-		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
-
-		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
-
-		glDisableVertexAttribArray(sp->a("vertex"));
-		glDisableVertexAttribArray(sp->a("normal"));
-		glDisableVertexAttribArray(sp->a("texCoord0"));
-	}
-}
 
 
 //Procedura rysująca zawartość sceny
-void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
+void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTime) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glm::mat4 V = glm::lookAt(
-		glm::vec3(0, 1, -5),
+		cameraPos,
 		glm::vec3(0, 0, 0),
 		glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -318,6 +435,8 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
 		draw_mesh_textured(meshes_tree, texTree, 0);	
 	}
+
+	drawParticles(deltaTime,M);
 
 	glfwSwapBuffers(window);
 }
@@ -362,8 +481,16 @@ int main(void)
 	{
 		angle_x += speed_x * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
 		angle_y += speed_y * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
+
+		std::chrono::steady_clock::time_point currentTime =
+        std::chrono::steady_clock::now();
+    std::chrono::duration<float> deltaTimeDuration =
+        currentTime - lastUpdateTime;
+    double deltaTime = deltaTimeDuration.count(); // Convert duration to seconds
+    lastUpdateTime = currentTime;
+		
 		glfwSetTime(0); //Zeruj timer
-		drawScene(window, angle_x, angle_y); //Wykonaj procedurę rysującą
+		drawScene(window, angle_x, angle_y, deltaTime); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 	}
 
