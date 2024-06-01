@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "camera.cpp"
 #include "shaderprogram.cpp"
 
 std::shared_ptr<ShaderProgram> sp_particles;
@@ -130,6 +131,10 @@ void updateParticles(float deltaTime) {
 // Function to render particles
 void drawParticles(double deltaTime) {
   sp_particles->use();
+
+
+
+  glUniform3f(sp_particles->u("camera_right"), cameraFront,cameraPos.y,cameraPos.z);
 
 
   updateParticles(deltaTime);  

@@ -41,6 +41,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
+#include "camera.cpp"
 #include "particles.cpp"
 #include "models.cpp"
 
@@ -48,15 +49,8 @@ float speed_x = 0;
 float speed_y = 0;
 float aspectRatio = 1;
 
-// Camera settings
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
 bool firstMouse = true;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float lastX = 400.0f, lastY = 300.0f;
-float fov = 45.0f;
 
 std::chrono::steady_clock::time_point lastUpdateTime =
     std::chrono::steady_clock::now();
@@ -167,28 +161,26 @@ void freeOpenGLProgram(GLFWwindow *window) {
 }
 
 // Procedura rysująca zawartość sceny
-void drawScene(GLFWwindow *window, float angle_x, float angle_y,
-               double deltaTime) {
+void drawScene(GLFWwindow *window, float angle_x, float angle_y,double deltaTime) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glm::mat4 V = glm::lookAt(glm::vec3(0, 1, -5), glm::vec3(0, 0, 0),
-                            glm::vec3(0.0f, 1.0f, 0.0f));
+  glm::mat4 V = glm::lookAt(cameraPos, glm::vec3(0, 0, 0),cameraUp);
 
-  glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.1f, 50.0f);
+  glm::mat4 P = glm::perspective(fovy, aspectRatio, 0.1f, 50.0f);
 
   glm::mat4 M = glm::mat4(1.0f);
   M = glm::rotate(M, glm::radians(-90.0f), glm::vec3(1.0f, 0, 0));
   M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));
   M = glm::rotate(M, angle_x, glm::vec3(0.0f, 0.0f, 1.0f));
 
-  sp->use();
-  glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-  glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
-  glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+  // sp->use();
+  // glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+  // glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+  // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-  glUniform1i(sp->u("textureMap1"), 1);
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, texNiebo);
+  // glUniform1i(sp->u("textureMap1"), 1);
+  // glActiveTexture(GL_TEXTURE1);
+  // glBindTexture(GL_TEXTURE_2D, texNiebo);
 
   // draw_mesh_textured(meshes_floor, texWulkan, 0, sp);
 
