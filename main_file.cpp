@@ -54,7 +54,7 @@ bool firstMouse = true;
 std::chrono::steady_clock::time_point lastUpdateTime =
     std::chrono::steady_clock::now();
 
-std::shared_ptr<ShaderProgram> sp;
+ShaderProgram* sp;
 
 
 // Procedura obsługi błędów
@@ -125,10 +125,8 @@ void initOpenGLProgram(GLFWwindow *window) {
   glfwSetWindowSizeCallback(window, windowResizeCallback);
   glfwSetKeyCallback(window, keyCallback);
 
-  sp = std::make_shared<ShaderProgram>(
-      ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl"));
-  sp_particles = std::make_shared<ShaderProgram>(
-      ShaderProgram("v_particles.glsl", NULL, "f_particles.glsl"));
+  sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
+  sp_particles = new ShaderProgram("v_particles.glsl", NULL, "f_particles.glsl");
 
   texWulkan = readTexture("Wulkan_ColorMap.png");
   texLava = readTexture("mlawa.png");
@@ -149,6 +147,9 @@ void initOpenGLProgram(GLFWwindow *window) {
 // Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow *window) {
   //************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
+
+  delete sp;
+  delete sp_particles;
 
   glDeleteTextures(1, &texWulkan);
   glDeleteTextures(1, &texLava);
@@ -173,38 +174,38 @@ void drawScene(GLFWwindow *window, float angle_x, float angle_y,double deltaTime
   M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));
   M = glm::rotate(M, angle_x, glm::vec3(0.0f, 0.0f, 1.0f));
 
-  // sp->use();
-  // glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-  // glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
-  // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+  sp->use();
+  glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+  glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+  glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-  // glUniform1i(sp->u("textureMap1"), 1);
-  // glActiveTexture(GL_TEXTURE1);
-  // glBindTexture(GL_TEXTURE_2D, texNiebo);
+  glUniform1i(sp->u("textureMap1"), 1);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, texNiebo);
 
-  // draw_mesh_textured(meshes_floor, texWulkan, 0, sp);
+  draw_mesh_textured(meshes_floor, texWulkan, 0, sp);
 
-  // glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01));
-  // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
-  // draw_mesh_textured(meshes_lava, texLava, 0, sp);
+  glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01));
+  glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
+  draw_mesh_textured(meshes_lava, texLava, 0, sp);
 
-  // glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2));
-  // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
-  // draw_mesh_textured(meshes_vulkan, texWulkan, 0, sp);
+  glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2));
+  glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
+  draw_mesh_textured(meshes_vulkan, texWulkan, 0, sp);
 
-  // glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1));
-  // Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
-  // Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
-  // Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
-  // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
-  // draw_mesh_textured(meshes_trex, texRex, 0, sp);
+  glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1));
+  Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
+  Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
+  Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
+  glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
+  draw_mesh_textured(meshes_trex, texRex, 0, sp);
 
-  // for (const auto &tree : treepos) {
-  //   glm::mat4 Mtree = glm::translate(M, tree);
-  //   Mtree = glm::scale(Mtree, glm::vec3(0.05f));
-  //   glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
-  //   draw_mesh_textured(meshes_tree, texTree, 0, sp);
-  // }
+  for (const auto &tree : treepos) {
+    glm::mat4 Mtree = glm::translate(M, tree);
+    Mtree = glm::scale(Mtree, glm::vec3(0.05f));
+    glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
+    draw_mesh_textured(meshes_tree, texTree, 0, sp);
+  }
 
   drawParticles(deltaTime,texNiebo,V,P*V);
 }
@@ -256,7 +257,7 @@ int main(void) {
         currentTime - lastUpdateTime;
     double deltaTime = deltaTimeDuration.count(); // Convert duration to seconds
     lastUpdateTime = currentTime;
-    glfwSetTime(0); // Reset timer
+    glfwSetTime(0);
 
     // Render scene
     drawScene(window, angle_x, angle_y, deltaTime);

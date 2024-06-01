@@ -90,7 +90,7 @@ void loadModel(std::string plik, std::vector<MeshData> &meshContainer) {
 }
 
 
-void draw_mesh_textured(const std::vector<MeshData> &mesh_vec, GLuint texture, GLint v0, std::shared_ptr<ShaderProgram> sp) {
+void draw_mesh_textured(const std::vector<MeshData> &mesh_vec, GLuint texture, GLint v0, ShaderProgram* sp) {
   glUniform1i(sp->u("textureMap0"), v0);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);

@@ -14,7 +14,7 @@
 #include "camera.cpp"
 #include "shaderprogram.cpp"
 
-std::shared_ptr<ShaderProgram> sp_particles;
+ShaderProgram* sp_particles;
 
 
 struct Particle {
@@ -53,7 +53,7 @@ GLuint particles_color_buffer;
 
 std::vector<glm::vec3> particles_position_data = std::vector<glm::vec3>(PARTICLES_SIZE); 
 std::vector<glm::vec4> particles_color_data = std::vector<glm::vec4>(PARTICLES_SIZE); 
-std::vector<glm::float32> particles_size_data = std::vector<glm::float32>(PARTICLES_SIZE); 
+std::vector<GLubyte> particles_size_data = std::vector<GLubyte>(PARTICLES_SIZE); 
 
 void particlesBuffersInit(){
 	glGenBuffers(1, &billboard_vertex_buffer);
@@ -70,7 +70,7 @@ void particlesBuffersInit(){
 
 	glGenBuffers(1, &particles_color_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
-	glBufferData(GL_ARRAY_BUFFER, PARTICLES_SIZE * 4 * sizeof(glm::float32), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, PARTICLES_SIZE * 4 * sizeof(GLubyte), NULL, GL_STREAM_DRAW);
 }
 
 
