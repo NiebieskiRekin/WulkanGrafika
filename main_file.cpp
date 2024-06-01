@@ -18,7 +18,6 @@ jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
 Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 */
 
-#pragma once
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
 
@@ -143,7 +142,8 @@ void initOpenGLProgram(GLFWwindow *window) {
   loadModel("trex.fbx", meshes_trex);
   loadModel("SnowTree.fbx", meshes_tree);
 
-  // TODO: particle and billboard buffers???
+  particlesBuffersInit();
+  
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -206,7 +206,7 @@ void drawScene(GLFWwindow *window, float angle_x, float angle_y,double deltaTime
   //   draw_mesh_textured(meshes_tree, texTree, 0, sp);
   // }
 
-  drawParticles(deltaTime);
+  drawParticles(deltaTime,texNiebo,V,P*V);
 }
 
 int main(void) {

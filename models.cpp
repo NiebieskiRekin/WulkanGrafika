@@ -48,8 +48,8 @@ void loadModel(std::string plik, std::vector<MeshData> &meshContainer) {
   using namespace std;
 
   Assimp::Importer importer;
-  std::shared_ptr<aiScene> scene = std::make_shared<aiScene>( 
-      importer.ReadFile(plik, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals));
+  const aiScene* scene = 
+      importer.ReadFile(plik, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals);
 
   if (!scene) {
     cerr << "Error loading model: " << importer.GetErrorString() << endl;
