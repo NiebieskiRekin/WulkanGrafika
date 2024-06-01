@@ -148,7 +148,6 @@ void updateParticles(float deltaTime) {
 
 // Function to render particles
 void drawParticles(double deltaTime, GLint Texture, const glm::mat4& ViewMatrix, const glm::mat4& PV) {
-  sp_particles->use();
 
 
   updateParticles(deltaTime);  
@@ -169,11 +168,13 @@ void drawParticles(double deltaTime, GLint Texture, const glm::mat4& ViewMatrix,
 	glBufferSubData(GL_ARRAY_BUFFER, 0, PARTICLES_SIZE * sizeof(glm::float32) * 4, particle_box);
 
 
-	// glEnable(GL_BLEND);
-	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// Use our shader
 	// glUseProgram(programID);
+  
+  sp_particles->use();
 
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
