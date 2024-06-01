@@ -121,7 +121,7 @@ void initOpenGLProgram(GLFWwindow *window) {
   // programu************
   glClearColor(0.1, 0.37, 0.37, 1);
   glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
+  // glDepthFunc(GL_LESS);
   glfwSetWindowSizeCallback(window, windowResizeCallback);
   glfwSetKeyCallback(window, keyCallback);
 
