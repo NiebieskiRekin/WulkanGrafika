@@ -4,10 +4,7 @@ rozprowadzać dalej i / lub modyfikować na warunkach Powszechnej
 Licencji Publicznej GNU, wydanej przez Fundację Wolnego
 Oprogramowania - według wersji 2 tej Licencji lub(według twojego
 wyboru) którejś z późniejszych wersji.
-
-Niniejszy program rozpowszechniany jest z nadzieją, iż będzie on
-użyteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domyślnej
-gwarancji PRZYDATNOŚCI HANDLOWEJ albo PRZYDATNOŚCI DO OKREŚLONYCH
+Niniejszy program rozpowszechniany jest z nadzieją, iż będzie on użyteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domyślnej gwarancji PRZYDATNOŚCI HANDLOWEJ albo PRZYDATNOŚCI DO OKREŚLONYCH
 ZASTOSOWAŃ.W celu uzyskania bliższych informacji sięgnij do
 Powszechnej Licencji Publicznej GNU.
 
@@ -251,7 +248,7 @@ void updateParticles(float deltaTime) {
 		}
 
 		p.lifespan -= deltaTime;
-		std::cout << p.lifespan << std::endl;
+		// std::cout << p.lifespan << std::endl;
 
 		if (p.lifespan < 0.0f) {
 			p.position = start_pos_particle;
@@ -411,6 +408,11 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	delete sp;
 
 	glDeleteTextures(1, &texWulkan);
+	glDeleteTextures(1, &texKostka);
+	glDeleteTextures(1, &texLava);
+	glDeleteTextures(1, &texNiebo);
+	glDeleteTextures(1, &texRex);
+	glDeleteTextures(1, &texTree);
 }
 
 
@@ -463,6 +465,17 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
 		draw_mesh_textured(meshes_tree, texTree, 0);
 	}
+
+
+
+	sp->use();
+	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+
+	glUniform1i(sp->u("textureMap1"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texNiebo);
 
 	drawParticles(deltaTime, M);
 
