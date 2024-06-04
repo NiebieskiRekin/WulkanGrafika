@@ -41,7 +41,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-ShaderProgram *sp;
+ShaderProgram* sp;
 
 struct MeshData {
 	std::vector<glm::vec4> vertices;
@@ -110,7 +110,7 @@ void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 	cout << "Model loaded!" << endl;
 }
 
-void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0){
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0) {
 	glUniform1i(sp->u("textureMap0"), v0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -134,9 +134,9 @@ void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, G
 	}
 }
 
-float speed_x=0;
-float speed_y=0;
-float aspectRatio=1;
+float speed_x = 0;
+float speed_y = 0;
+float aspectRatio = 1;
 
 // Camera settings
 
@@ -151,117 +151,140 @@ float fov = 45.0f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 std::chrono::steady_clock::time_point lastUpdateTime =
-    std::chrono::steady_clock::now();
+std::chrono::steady_clock::now();
 
 
-const glm::vec3 start_pos_particle = glm::vec3(0,0,1.5);
+const glm::vec3 start_pos_particle = glm::vec3(0, 0, 1);
 
 struct Particle {
-  glm::vec3 position;
-  glm::vec3 velocity;
-  float lifespan = -1.0f; // Remaining lifespan of the particle
-  float distanceToCamera = -1.0f;
+	glm::vec3 position;
+	glm::vec3 velocity;
+	float lifespan = -1.0f; // Remaining lifespan of the particle
+	float distanceToCamera = -1.0f;
 
-  bool operator<(const Particle &other) const {
-    return other.distanceToCamera < this->distanceToCamera;
-  }
+	bool operator<(const Particle& other) const {
+		return other.distanceToCamera < this->distanceToCamera;
+	}
 
-  Particle() {
-    position = start_pos_particle;
-    velocity = glm::vec3(0);
-  }
+	Particle() {
+		position = start_pos_particle;
+		velocity = glm::vec3(0);
+	}
 };
 
-const size_t PARTICLES_SIZE = 10;
+const size_t PARTICLES_SIZE = 300;
 std::vector<Particle> particles = std::vector<Particle>(PARTICLES_SIZE);
 size_t lastUsedParticle = 0;
-std::vector<glm::vec3> particles_position_data = std::vector<glm::vec3>(PARTICLES_SIZE); 
+std::vector<glm::vec3> particles_position_data = std::vector<glm::vec3>(PARTICLES_SIZE);
 
 size_t findUnusedParticle() {
 
-  // ┌─┬─┬─┬─┬─┬─┐
-  // │x│x│x│ │ │ │
-  // └─┴─┴─┴─┴─┴─┘
-  //      ^
-  //      last used, move forward in the array
-  for (size_t i = lastUsedParticle; i < particles.size(); i++) {
-    if (particles[i].lifespan < 0) {
-      lastUsedParticle = i;
-      return i;
-    }
-  }
+	// ┌─┬─┬─┬─┬─┬─┐
+	// │x│x│x│ │ │ │
+	// └─┴─┴─┴─┴─┴─┘
+	//      ^
+	//      last used, move forward in the array
+	for (size_t i = lastUsedParticle; i < particles.size(); i++) {
+		if (particles[i].lifespan < 0) {
+			lastUsedParticle = i;
+			return i;
+		}
+	}
 
-  // ┌─┬─┬─┬─┬─┬─┐
-  // │ │ │x│x│x│x│
-  // └─┴─┴─┴─┴─┴─┘
-  //  ^         ^
-  //  │        last used, move back to start
-  //  │
-  //  │         │
-  //  └─────────┘
+	// ┌─┬─┬─┬─┬─┬─┐
+	// │ │ │x│x│x│x│
+	// └─┴─┴─┴─┴─┴─┘
+	//  ^         ^
+	//  │        last used, move back to start
+	//  │
+	//  │         │
+	//  └─────────┘
 
-  for (size_t i = 0; i < lastUsedParticle; i++) {
-    if (particles[i].lifespan < 0) {
-      lastUsedParticle = i;
-      return i;
-    }
-  }
+	for (size_t i = 0; i < lastUsedParticle; i++) {
+		if (particles[i].lifespan < 0) {
+			lastUsedParticle = i;
+			return i;
+		}
+	}
 
-  // No free particles
-  return 0;
+	// No free particles
+	return 0;
 }
 
 // Function to update particles
 void updateParticles(float deltaTime) {
-  int newparticles = 10;
+	int newparticles = 10;
 
-  for (int i=0; i<newparticles; i++){
-    size_t p = findUnusedParticle();
-    particles[p].lifespan = 1.0f; // 1s
-    particles[p].velocity = glm::vec3(0.0, 0.0f, (float)i/newparticles);
-  }  
+	float spread = 0.5f;
+	glm::vec3 maindir = glm::vec3(0.0f, 0.0f, 1.0f);
+	// Very bad way to generate a random direction; 
+	// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
+	// combined with some user-controlled parameters (main direction, spread, etc)
+	
 
-  size_t c = 0; //count
-  for (auto& p : particles){
-    if (p.lifespan < 0.0f){
-    	p.position = start_pos_particle;
-      continue;
-    }
 
-    p.lifespan -= deltaTime;
-    std::cout << p.lifespan << std::endl;
-  
-    if (p.lifespan < 0.0f){
-    	p.position = start_pos_particle;
-      p.distanceToCamera = -1.0f;
-      c++;
-      continue;
-    }
+	// Very bad way to generate a random color
+	//ParticlesContainer[particleIndex].r = rand() % 256;
+	//ParticlesContainer[particleIndex].g = rand() % 256;
+	//ParticlesContainer[particleIndex].b = rand() % 256;
+	//ParticlesContainer[particleIndex].a = (rand() % 256) / 3;
 
-    // velocity...
-    p.position += p.velocity * deltaTime;
+	//ParticlesContainer[particleIndex].size = (rand() % 1000) / 2000.0f + 0.1f;
 
-    p.distanceToCamera = glm::length(p.position - cameraPos);
-    p.distanceToCamera *= p.distanceToCamera; // distance squared
+	for (int i = 0; i < newparticles; i++) {
+		size_t p = findUnusedParticle();
+		particles[p].lifespan = 3.0f; 
+		glm::vec3 randomdir = glm::vec3(
+			(rand() % 2000 - 1000.0f) / 1000.0f,
+			(rand() % 2000 - 1000.0f) / 1000.0f,
+			(rand() % 2000 - 1000.0f) / 1000.0f
+		);
 
-    particles_position_data[c] = p.position;
-    c++; }
+		particles[p].velocity = maindir + randomdir * spread;
+	}
+
+	size_t c = 0; //count
+	for (auto& p : particles) {
+		if (p.lifespan < 0.0f) {
+			p.position = start_pos_particle;
+			continue;
+		}
+
+		p.lifespan -= deltaTime;
+		std::cout << p.lifespan << std::endl;
+
+		if (p.lifespan < 0.0f) {
+			p.position = start_pos_particle;
+			p.distanceToCamera = -1.0f;
+			c++;
+			continue;
+		}
+
+		// velocity...
+		p.position += p.velocity * deltaTime;
+
+		p.distanceToCamera = glm::length(p.position - cameraPos);
+		p.distanceToCamera *= p.distanceToCamera; // distance squared
+
+		particles_position_data[c] = p.position;
+		c++;
+	}
 }
 
-void drawParticles(double deltaTime,const glm::mat4& M){
-	
-  updateParticles(deltaTime);  
+void drawParticles(double deltaTime, const glm::mat4& M) {
 
-	// std::sort(particles.begin(), particles.end());
+	updateParticles(deltaTime);
 
-	for (auto& p : particles_position_data){
+	std::sort(particles.begin(), particles.end());
+
+	for (auto& p : particles_position_data) {
 		glm::mat4 Mkostka = glm::translate(M, p);
-		Mkostka = glm::scale(Mkostka,glm::vec3(0.05));
+		Mkostka = glm::scale(Mkostka, glm::vec3(0.02));
 		// std::cout << Mkostka[0][0] << " " << Mkostka[1][1] << " " << Mkostka[2][2] << " "<< Mkostka[3][3] << std::endl;
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mkostka));
-		draw_mesh_textured(meshes_kostka, texKostka, 0);		
+		draw_mesh_textured(meshes_kostka, texKostka, 0);
 	}
-	
+
 }
 
 const glm::vec3 treepos[] = {
@@ -308,61 +331,61 @@ void error_callback(int error, const char* description) {
 }
 
 
-void keyCallback(GLFWwindow* window,int key,int scancode,int action,int mods) {
-    if (action==GLFW_PRESS) {
-        if (key==GLFW_KEY_LEFT) speed_x=-PI/2;
-        if (key==GLFW_KEY_RIGHT) speed_x=PI/2;
-        if (key==GLFW_KEY_UP) speed_y=PI/2;
-        if (key==GLFW_KEY_DOWN) speed_y=-PI/2;
-    }
-    if (action==GLFW_RELEASE) {
-        if (key==GLFW_KEY_LEFT) speed_x=0;
-        if (key==GLFW_KEY_RIGHT) speed_x=0;
-        if (key==GLFW_KEY_UP) speed_y=0;
-        if (key==GLFW_KEY_DOWN) speed_y=0;
-    }
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (action == GLFW_PRESS) {
+		if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
+		if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
+		if (key == GLFW_KEY_UP) speed_y = PI / 2;
+		if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+	}
+	if (action == GLFW_RELEASE) {
+		if (key == GLFW_KEY_LEFT) speed_x = 0;
+		if (key == GLFW_KEY_RIGHT) speed_x = 0;
+		if (key == GLFW_KEY_UP) speed_y = 0;
+		if (key == GLFW_KEY_DOWN) speed_y = 0;
+	}
 }
 
 
-void windowResizeCallback(GLFWwindow* window,int width,int height) {
-    if (height==0) return;
-    aspectRatio=(float)width/(float)height;
-    glViewport(0,0,width,height);
+void windowResizeCallback(GLFWwindow* window, int width, int height) {
+	if (height == 0) return;
+	aspectRatio = (float)width / (float)height;
+	glViewport(0, 0, width, height);
 }
 
 GLuint readTexture(const char* filename) {
-    GLuint tex;
-    glActiveTexture(GL_TEXTURE0);
+	GLuint tex;
+	glActiveTexture(GL_TEXTURE0);
 
-    //Wczytanie do pamięci komputera
-    std::vector<unsigned char> image;   //Alokuj wektor do wczytania obrazka
-    unsigned width, height;   //Zmienne do których wczytamy wymiary obrazka
-    //Wczytaj obrazek
-    unsigned error = lodepng::decode(image, width, height, filename);
+	//Wczytanie do pamięci komputera
+	std::vector<unsigned char> image;   //Alokuj wektor do wczytania obrazka
+	unsigned width, height;   //Zmienne do których wczytamy wymiary obrazka
+	//Wczytaj obrazek
+	unsigned error = lodepng::decode(image, width, height, filename);
 
-    //Import do pamięci karty graficznej
-    glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
-    glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
-    //Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
-    glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
-        GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
+	//Import do pamięci karty graficznej
+	glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
+	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
+	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    return tex;
+	return tex;
 }
 
 
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
-	glClearColor(0.1,0.37,0.37,1);
+	glClearColor(0.1, 0.37, 0.37, 1);
 	glEnable(GL_DEPTH_TEST);
-	glfwSetWindowSizeCallback(window,windowResizeCallback);
-	glfwSetKeyCallback(window,keyCallback);
+	glfwSetWindowSizeCallback(window, windowResizeCallback);
+	glfwSetKeyCallback(window, keyCallback);
 
-	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
+	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 
 	texWulkan = readTexture("../assets/textures/Wulkan_ColorMap.png");
 	texLava = readTexture("../assets/textures/mlawa.png");
@@ -370,22 +393,22 @@ void initOpenGLProgram(GLFWwindow* window) {
 	texNiebo = readTexture("../assets/textures/sky.png");
 	texRex = readTexture("../assets/textures/trex_diff.png");
 	texTree = readTexture("../assets/textures/Ramas Nieve.png");
-	texKostka = readTexture("../assets/textures/PINK_PLACEHOLDER.png");
+	texKostka = readTexture("../assets/textures/mlawa_lightmap.png");
 
 	loadModel("../assets/models/wulkan.fbx", meshes_vulkan);
 	loadModel("../assets/models/lava.fbx", meshes_lava);
 	loadModel("../assets/models/floor.fbx", meshes_floor);
 	loadModel("../assets/models/trex.fbx", meshes_trex);
 	loadModel("../assets/models/SnowTree.fbx", meshes_tree);
-	loadModel("../assets/models/kostka.fbx", meshes_kostka);
+	loadModel("../assets/models/particle.fbx", meshes_kostka);
 }
 
 
 //Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
-    //************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
+	//************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
 
-    delete sp;
+	delete sp;
 
 	glDeleteTextures(1, &texWulkan);
 }
@@ -402,7 +425,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 		glm::vec3(0.0f, 1.0f, 0.0f));
 
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.1f, 50.0f);
-	
+
 	glm::mat4 M = glm::mat4(1.0f);
 	M = glm::rotate(M, glm::radians(-90.0f), glm::vec3(1.0f, 0, 0));
 	M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -416,32 +439,32 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 	glUniform1i(sp->u("textureMap1"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texNiebo);
-	
+
 	draw_mesh_textured(meshes_floor, texWulkan, 0);
 
 	glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
-	draw_mesh_textured(meshes_lava, texLava,0);	
+	draw_mesh_textured(meshes_lava, texLava, 0);
 
 	glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
 	draw_mesh_textured(meshes_vulkan, texWulkan, 0);
 
-	glm::mat4 Mtrex  = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
+	glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
 	Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
 	Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
 	Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
 	draw_mesh_textured(meshes_trex, texRex, 0);
 
-	for (const auto& tree : treepos){
+	for (const auto& tree : treepos) {
 		glm::mat4 Mtree = glm::translate(M, tree); // Adjust position if needed
 		Mtree = glm::scale(Mtree, glm::vec3(0.05f));
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
-		draw_mesh_textured(meshes_tree, texTree, 0);	
+		draw_mesh_textured(meshes_tree, texTree, 0);
 	}
 
-	drawParticles(deltaTime,M);
+	drawParticles(deltaTime, M);
 
 	glfwSwapBuffers(window);
 }
@@ -488,12 +511,12 @@ int main(void)
 		angle_y += speed_y * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
 
 		std::chrono::steady_clock::time_point currentTime =
-        std::chrono::steady_clock::now();
-    std::chrono::duration<float> deltaTimeDuration =
-        currentTime - lastUpdateTime;
-    double deltaTime = deltaTimeDuration.count(); // Convert duration to seconds
-    lastUpdateTime = currentTime;
-		
+			std::chrono::steady_clock::now();
+		std::chrono::duration<float> deltaTimeDuration =
+			currentTime - lastUpdateTime;
+		double deltaTime = deltaTimeDuration.count(); // Convert duration to seconds
+		lastUpdateTime = currentTime;
+
 		glfwSetTime(0); //Zeruj timer
 		drawScene(window, angle_x, angle_y, deltaTime); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
