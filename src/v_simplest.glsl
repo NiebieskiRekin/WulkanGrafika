@@ -19,7 +19,10 @@ out vec2 iTexCoord0;
 out vec2 iTexCoord1;
 
 void main(void) {
-    vec4 lp1 = vec4(0, 3, 0, 1); //pozycja pierwszego światła, przestrzeń świata
+    // vec4 lp1 = vec4(0, 3, 0, 1); //pozycja pierwszego światła, przestrzeń świata
+
+    vec4 lp1 = vec4(0, 2.5, 0, 1); //pozycja pierwszego światła, przestrzeń świata
+
     vec4 lp2 = vec4(5, 3, 0, 1); //pozycja drugiego światła, przestrzeń świata
 
     l1 = normalize((V * lp1 - V * M * vertex).xyz); //wektor do pierwszego światła w przestrzeni oka

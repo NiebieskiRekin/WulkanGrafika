@@ -65,6 +65,12 @@ GLuint texRex;
 GLuint texTree;
 GLuint texKostka;
 
+float random_blysk = 0;
+const double c_okres_blysku = 0.5f; // s
+const double c_czas_blysku = 0.1; //s 
+double okres_blysku = c_okres_blysku; // s
+double czas_blysku = c_czas_blysku; //s 
+
 
 void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 {
@@ -251,7 +257,7 @@ void updateParticles(float deltaTime) {
 		}
 
 		p.lifespan -= deltaTime;
-		std::cout << p.lifespan << std::endl;
+		// std::cout << p.lifespan << std::endl;
 
 		if (p.lifespan < 0.0f) {
 			p.position = start_pos_particle;
@@ -439,6 +445,24 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 	glUniform1i(sp->u("textureMap1"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texNiebo);
+
+
+	if (okres_blysku < 0) {
+		okres_blysku= c_okres_blysku*(rand()%5)/5.0f + 1.0f;
+		random_blysk = (rand()%5)/5.0f;
+	} else {
+		if (czas_blysku < 0){
+			czas_blysku= c_czas_blysku;
+			random_blysk = 0;
+		} else {
+			czas_blysku -= deltaTime;
+		}
+		okres_blysku -= deltaTime;
+	} 
+	
+
+
+	glUniform1f(sp->u("random"), random_blysk);
 
 	draw_mesh_textured(meshes_floor, texWulkan, 0);
 
