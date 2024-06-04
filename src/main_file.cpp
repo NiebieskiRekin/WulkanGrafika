@@ -39,7 +39,29 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <assimp/postprocess.h>
 
 ShaderProgram* sp;
+ShaderProgram* sp_blur;
+ShaderProgram* sp_framebuffer;
+ShaderProgram* sp_default;
 
+// bloom settings
+// Number of samples per pixel for MSAA
+unsigned int samples_bloom = 8;
+
+// Controls the gamma function
+float gamma_bloom = 2.2f;
+
+unsigned int rectVAO, rectVBO;
+
+unsigned int postProcessingFBO;
+unsigned int postProcessingTexture;
+unsigned int bloomTexture;
+unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+unsigned int pingpongFBO[2];
+unsigned int pingpongBuffer[2];
+
+int width = 1000, height = 1000;
+
+// model loading stuff
 struct MeshData {
 	std::vector<glm::vec4> vertices;
 	std::vector<glm::vec4> normals;
@@ -55,6 +77,7 @@ std::vector<MeshData> meshes_tree;
 std::vector<MeshData> meshes_kostka;
 
 GLuint texWulkan;
+GLuint texWulkanNormal;
 GLuint texLava;
 GLuint texLavaLight;
 GLuint texNiebo;
@@ -107,7 +130,7 @@ void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 	cout << "Model loaded!" << endl;
 }
 
-void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0) {
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0, ShaderProgram* sp) {
 	glUniform1i(sp->u("textureMap0"), v0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -279,9 +302,8 @@ void drawParticles(double deltaTime, const glm::mat4& M) {
 		Mkostka = glm::scale(Mkostka, glm::vec3(0.02));
 		// std::cout << Mkostka[0][0] << " " << Mkostka[1][1] << " " << Mkostka[2][2] << " "<< Mkostka[3][3] << std::endl;
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mkostka));
-		draw_mesh_textured(meshes_kostka, texKostka, 0);
+		draw_mesh_textured(meshes_kostka, texKostka, 0, sp);
 	}
-
 }
 
 const glm::vec3 treepos[] = {
@@ -319,6 +341,18 @@ const glm::vec3 treepos[] = {
 //int vertexCount = myTeapotVertexCount;
 
 
+
+float rectangleVertices[] =
+{
+	//  Coords   // texCoords
+	 1.0f, -1.0f,  1.0f, 0.0f,
+	-1.0f, -1.0f,  0.0f, 0.0f,
+	-1.0f,  1.0f,  0.0f, 1.0f,
+
+	 1.0f,  1.0f,  1.0f, 1.0f,
+	 1.0f, -1.0f,  1.0f, 0.0f,
+	-1.0f,  1.0f,  0.0f, 1.0f
+};
 
 
 
@@ -383,8 +417,13 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glfwSetKeyCallback(window, keyCallback);
 
 	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
+	sp_framebuffer = new ShaderProgram("v_framebuffer.glsl", NULL, "f_framebuffer.glsl");
+	sp_blur = new ShaderProgram("v_framebuffer.glsl", NULL, "f_blur.glsl");
+
+	sp_default = new ShaderProgram("v_default.glsl", "g_default.glsl", "f_default.glsl");
 
 	texWulkan = readTexture("../assets/textures/Wulkan_ColorMap.png");
+	texWulkanNormal= readTexture("../assets/textures/Wulkan_normal.png");
 	texLava = readTexture("../assets/textures/mlawa.png");
 	texLavaLight = readTexture("../assets/textures/mlawa_lightmap.png");
 	texNiebo = readTexture("../assets/textures/sky.png");
@@ -392,12 +431,92 @@ void initOpenGLProgram(GLFWwindow* window) {
 	texTree = readTexture("../assets/textures/Ramas Nieve.png");
 	texKostka = readTexture("../assets/textures/mlawa_lightmap.png");
 
+	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	sp_default->use();
+	glUniform4f(sp_default->u( "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+	glUniform3f(sp_default->u("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+	sp_framebuffer->use();
+	glUniform1i(sp_framebuffer->u("screenTexture"), 0);
+	glUniform1i(sp_framebuffer->u( "bloomTexture"), 1);
+	glUniform1f(sp_framebuffer->u("gamma"), gamma_bloom);
+	sp_blur->use();
+	glUniform1i(sp_blur->u("screenTexture"), 0);
+
+
 	loadModel("../assets/models/wulkan.fbx", meshes_vulkan);
 	loadModel("../assets/models/lava.fbx", meshes_lava);
 	loadModel("../assets/models/floor.fbx", meshes_floor);
 	loadModel("../assets/models/trex.fbx", meshes_trex);
 	loadModel("../assets/models/SnowTree.fbx", meshes_tree);
 	loadModel("../assets/models/particle.fbx", meshes_kostka);
+
+	// Enables the Depth Buffer
+	glEnable(GL_DEPTH_TEST);
+
+	// Enables Multisampling
+	glEnable(GL_MULTISAMPLE);
+
+	// Enables Cull Facing
+	glEnable(GL_CULL_FACE);
+	// Keeps front faces
+	glCullFace(GL_FRONT);
+	// Uses counter clock-wise standard
+	glFrontFace(GL_CCW);
+
+	glGenVertexArrays(1, &rectVAO);
+	glGenBuffers(1, &rectVBO);
+	glBindVertexArray(rectVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+	glGenFramebuffers(1, &postProcessingFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
+
+	glGenTextures(1, &bloomTexture);
+	glBindTexture(GL_TEXTURE_2D, bloomTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTexture, 0);
+
+	glDrawBuffers(2, attachments);
+
+	// Error checking framebuffer
+	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Post-Processing Framebuffer error: " << fboStatus << std::endl;
+
+	glGenFramebuffers(2, pingpongFBO);
+	glGenTextures(2, pingpongBuffer);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
+
+		fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "Ping-Pong Framebuffer error: " << fboStatus << std::endl;
+	}
+
+	// TODO: need to load normal, diffuse and displacement maps
+
+	
+	
 }
 
 
@@ -406,6 +525,11 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	//************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
 
 	delete sp;
+	delete sp_blur;
+	delete sp_framebuffer;
+	delete sp_default;
+
+	glDeleteFramebuffers(1, &postProcessingFBO);
 
 	glDeleteTextures(1, &texWulkan);
 	glDeleteTextures(1, &texKostka);
@@ -419,7 +543,9 @@ void freeOpenGLProgram(GLFWwindow* window) {
 
 //Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTime) {
+	glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
 
 	glm::mat4 V = glm::lookAt(
 		cameraPos,
@@ -433,51 +559,129 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 	M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));
 	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 0.0f, 1.0f));
 
-	sp->use();
-	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-
-	glUniform1i(sp->u("textureMap1"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texNiebo);
-
-	draw_mesh_textured(meshes_floor, texWulkan, 0);
-
-	glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
-	draw_mesh_textured(meshes_lava, texLava, 0);
-
-	glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
-	draw_mesh_textured(meshes_vulkan, texWulkan, 0);
-
-	glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
-	Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
-	Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
-	Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
-	draw_mesh_textured(meshes_trex, texRex, 0);
-
-	for (const auto& tree : treepos) {
-		glm::mat4 Mtree = glm::translate(M, tree); // Adjust position if needed
-		Mtree = glm::scale(Mtree, glm::vec3(0.05f));
-		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
-		draw_mesh_textured(meshes_tree, texTree, 0);
-	}
+	sp_default->use();
+	glBindTexture(GL_TEXTURE_2D,texWulkanNormal);
+	glUniform1f(sp_default->u("normal0"),1);
+	
+	glBindTexture(GL_TEXTURE_2D,texWulkan);
+	glUniform1f(sp_default->u("displacement0"),2);
 
 
 
-	sp->use();
-	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+	// sp->use();
+	// glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+	// glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+	// glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-	glUniform1i(sp->u("textureMap1"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texNiebo);
+	// glUniform1i(sp->u("textureMap1"), 1);
+	// glActiveTexture(GL_TEXTURE1);
+	// glBindTexture(GL_TEXTURE_2D, texNiebo);
 
-	drawParticles(deltaTime, M);
+	// draw_mesh_textured(meshes_floor, texWulkan, 0,sp);
+
+	// glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
+	// glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
+	// draw_mesh_textured(meshes_lava, texLava, 0,sp);
+
+	// // glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
+	// // glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
+	// // draw_mesh_textured(meshes_vulkan, texWulkan, 0);
+
+	// glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
+	// Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
+	// Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
+	// Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
+	// glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
+	// draw_mesh_textured(meshes_trex, texRex, 0,sp);
+
+	// for (const auto& tree : treepos) {
+	// 	glm::mat4 Mtree = glm::translate(M, tree); // Adjust position if needed
+	// 	Mtree = glm::scale(Mtree, glm::vec3(0.05f));
+	// 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
+	// 	draw_mesh_textured(meshes_tree, texTree, 0,sp);
+	// }
+
+	// sp->use();
+	// glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+	// glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+	// glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+
+	// glUniform1i(sp->u("textureMap1"), 1);
+	// glActiveTexture(GL_TEXTURE1);
+	// glBindTexture(GL_TEXTURE_2D, texNiebo);
+
+	// drawParticles(deltaTime, M);
+
+	// Bloom
+	// Bounce the image data around to blur multiple times
+		bool horizontal = true, first_iteration = true;
+		// Amount of time to bounce the blur
+		int amount = 2;
+		sp_blur->use();
+		for (unsigned int i = 0; i < amount; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+			glUniform1i(sp_blur->u("horizontal"), horizontal);
+
+			// In the first bounc we want to get the data from the bloomTexture
+			if (first_iteration)
+			{
+				glBindTexture(GL_TEXTURE_2D, bloomTexture);
+				first_iteration = false;
+			}
+			// Move the data between the pingPong textures
+			else
+			{
+				glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
+			}
+
+
+				// Render the image
+			glBindVertexArray(rectVAO);
+			glDisable(GL_DEPTH_TEST);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			// glUniform1i(sp->u("textureMap0"), 0);
+			// glActiveTexture(GL_TEXTURE0);
+			// glBindTexture(GL_TEXTURE_2D, texWulkan);
+
+			// // Draw first model
+			// for (const MeshData& mesh : meshes_vulkan) {
+			// // Render the image
+			// 	glEnableVertexAttribArray(sp->a("vertex"));
+			// 	glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
+
+			// 	glEnableVertexAttribArray(sp->a("normal"));
+			// 	glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, mesh.normals.data());
+
+			// 	glEnableVertexAttribArray(sp->a("texCoord0"));
+			// 	glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, mesh.texCoords.data());
+
+			// 	glDisable(GL_DEPTH_TEST);
+			// 	glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, mesh.indices.data());
+
+			// 	glDisableVertexAttribArray(sp->a("vertex"));
+			// 	glDisableVertexAttribArray(sp->a("normal"));
+			// 	glDisableVertexAttribArray(sp->a("texCoord0"));
+			// }
+
+			// Switch between vertical and horizontal blurring
+			horizontal = !horizontal;
+		}
+
+
+	// Bind the default framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// Draw the framebuffer rectangle
+		sp_framebuffer->use();
+		glBindVertexArray(rectVAO);
+		glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, postProcessingTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+	
 
 	glfwSwapBuffers(window);
 }
@@ -495,7 +699,7 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
-	window = glfwCreateWindow(1000, 1000, "OpenGL", NULL, NULL);  //Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
+	window = glfwCreateWindow(width, height, "OpenGL", NULL, NULL);  //Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
 
 	if (!window) //Jeżeli okna nie udało się utworzyć, to zamknij program
 	{
