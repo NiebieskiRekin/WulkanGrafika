@@ -58,12 +58,22 @@ std::vector<MeshData> meshes_tree;
 std::vector<MeshData> meshes_kostka;
 
 GLuint texWulkan;
+GLuint specWulkan;
+
 GLuint texLava;
-GLuint texLavaLight;
+GLuint specLava;
+// GLuint texLavaLight;
+
 GLuint texNiebo;
+
 GLuint texRex;
+GLuint specRex;
+
 GLuint texTree;
+GLuint specTree;
+
 GLuint texKostka;
+GLuint specKostka;
 
 float random_blysk = 0;
 const double c_okres_blysku = 0.5f; // s
@@ -138,10 +148,13 @@ void draw_mesh(const std::vector<MeshData>& mesh_vec){
 	}
 }
 
-void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0) {
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLuint specular,  GLint v0) {
 	glUniform1i(sp->u("textureMap0"), v0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
+	glUniform1i(sp->u("textureMap2"), v0+2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, specular);
 	draw_mesh(mesh_vec);
 }
 
@@ -293,7 +306,7 @@ void drawParticles(double deltaTime, const glm::mat4& M) {
 		Mkostka = glm::scale(Mkostka, glm::vec3(0.02));
 		// std::cout << Mkostka[0][0] << " " << Mkostka[1][1] << " " << Mkostka[2][2] << " "<< Mkostka[3][3] << std::endl;
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mkostka));
-		draw_mesh_textured(meshes_kostka, texKostka, 0);
+		draw_mesh_textured(meshes_kostka, texKostka, specKostka, 0);
 	}
 
 }
@@ -399,12 +412,23 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 
 	texWulkan = readTexture("../assets/textures/Wulkan_ColorMap.png");
+	specWulkan = readTexture("../assets/textures/Wulkan_specular.png");
+	
 	texLava = readTexture("../assets/textures/mlawa.png");
-	texLavaLight = readTexture("../assets/textures/mlawa_lightmap.png");
+	specLava = readTexture("../assets/textures/mlawa_specular.png");
+	// texLavaLight = readTexture("../assets/textures/mlawa_lightmap.png");
+
 	texNiebo = readTexture("../assets/textures/sky.png");
+
 	texRex = readTexture("../assets/textures/trex_diff.png");
+	specRex = readTexture("../assets/textures/trex_specular.png");
+	
 	texTree = readTexture("../assets/textures/Ramas Nieve.png");
+	specTree = readTexture("../assets/textures/tree_specular.png");
+
 	texKostka = readTexture("../assets/textures/mlawa_lightmap.png");
+	specKostka = specLava;
+	
 
 	loadModel("../assets/models/wulkan.fbx", meshes_vulkan);
 	loadModel("../assets/models/lava.fbx", meshes_lava);
@@ -468,32 +492,32 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 	
 	glUniform1f(sp->u("random"), random_blysk);
 
-	draw_mesh_textured(meshes_floor, texWulkan, 0);
+	draw_mesh_textured(meshes_floor, texWulkan, specWulkan, 0);
 
 	glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
 
 	glUniform2f(sp->u("textureRoll"), 0,tex_offset_counter*lava_tex_coords_offset_per_frame);
 	tex_offset_counter = std::max(tex_offset_counter+1, 60);
-	draw_mesh_textured(meshes_lava,texLava,0);
+	draw_mesh_textured(meshes_lava,texLava, specLava, 0);
 
 	glUniform2f(sp->u("textureRoll"), 0,0);
 	glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
-	draw_mesh_textured(meshes_vulkan, texWulkan, 0);
+	draw_mesh_textured(meshes_vulkan, texWulkan, specWulkan, 0);
 
 	glm::mat4 Mtrex = glm::translate(M, glm::vec3(2.0f, 1, 0.1)); // Adjust position if needed
 	Mtrex = glm::rotate(Mtrex, glm::radians(180.0f), glm::vec3(0, 1, 1));
 	Mtrex = glm::rotate(Mtrex, glm::radians(90.0f), glm::vec3(0, 1, 0));
 	Mtrex = glm::scale(Mtrex, glm::vec3(0.1));
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtrex));
-	draw_mesh_textured(meshes_trex, texRex, 0);
+	draw_mesh_textured(meshes_trex, texRex, specRex, 0);
 
 	for (const auto& tree : treepos) {
 		glm::mat4 Mtree = glm::translate(M, tree); // Adjust position if needed
 		Mtree = glm::scale(Mtree, glm::vec3(0.05f));
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mtree));
-		draw_mesh_textured(meshes_tree, texTree, 0);
+		draw_mesh_textured(meshes_tree, texTree, specTree, 0);
 	}
 
 	drawParticles(deltaTime, M);

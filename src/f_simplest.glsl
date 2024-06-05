@@ -2,6 +2,7 @@
 
 uniform sampler2D textureMap0; 
 uniform sampler2D textureMap1;
+uniform sampler2D textureMap2;
 uniform float random;
 
 out vec4 pixelColor; //Zmienna wyjsciowa fragment shadera. Zapisuje sie do niej ostateczny (prawie) kolor piksela
@@ -43,9 +44,9 @@ void main(void) {
     vec3 mr2 = reflect(-ml2, mn);
 
     //Parametry powierzchni
-    vec4 kd = mix(texture(textureMap0, iTexCoord0), texture(textureMap1, iTexCoord1), 0.2);
-    // vec4 kd = texture(textureMap0, iTexCoord0);
-    vec3 ks = vec3(1, 1, 1);
+    vec4 kd = mix(texture(textureMap0, iTexCoord0), mix(texture(textureMap1,iTexCoord1), texture(textureMap2, iTexCoord0),0.8), 0.2);
+    // vec4 ks = texture(textureMap2, iTexCoord0);
+    vec3 ks = vec3(0,0,0);
 
     //Obliczenie modelu oświetlenia dla obu świateł
     float nl1 = clamp(dot(mn, ml1), 0.0, 1.0);
@@ -56,6 +57,7 @@ void main(void) {
     vec3 orange_shift = vec3(kd.r * nl1*random * 2, kd.g*nl1*random, kd.b*0.0);
     vec3 diffuse = orange_shift + kd.rgb*nl2;
  
+    // vec3 specular = ks.rgb * (rv1*random/2 + rv2);
     vec3 specular = ks * (rv1*random/2 + rv2);
 
     // boost saturation
