@@ -4,6 +4,7 @@
 uniform mat4 P;
 uniform mat4 V;
 uniform mat4 M;
+uniform vec2 textureRoll;
 
 //Atrybuty
 in vec4 vertex; //wspolrzedne wierzcholka w przestrzeni modelu
@@ -30,7 +31,7 @@ void main(void) {
     v = normalize((vec4(0, 0, 0, 1) - V * M * vertex).xyz); //wektor do obserwatora w przestrzeni oka
     n = normalize((V * M * normal).xyz); //wektor normalny w przestrzeni oka
     
-    iTexCoord0 = texCoord0;
+    iTexCoord0 = texCoord0+textureRoll;
     iTexCoord1 = (n.xy + 1) / 2;
     
     gl_Position = P * V * M * vertex;

@@ -31,7 +31,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "constants.h"
 #include "lodepng.h"
 #include "shaderprogram.h"
-
+#include <algorithm>
 #include <chrono>
 
 #include <iostream>
@@ -71,6 +71,8 @@ const double c_czas_blysku = 0.1; //s
 double okres_blysku = c_okres_blysku; // s
 double czas_blysku = c_czas_blysku; //s 
 
+const GLfloat lava_tex_coords_offset_per_frame = 0.001f;
+int tex_offset_counter = 0; 
 
 void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 {
@@ -116,11 +118,7 @@ void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 	cout << "Model loaded!" << endl;
 }
 
-void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0) {
-	glUniform1i(sp->u("textureMap0"), v0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
+void draw_mesh(const std::vector<MeshData>& mesh_vec){
 	// Draw first model
 	for (const MeshData& mesh : mesh_vec) {
 		glEnableVertexAttribArray(sp->a("vertex"));
@@ -138,6 +136,13 @@ void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, G
 		glDisableVertexAttribArray(sp->a("normal"));
 		glDisableVertexAttribArray(sp->a("texCoord0"));
 	}
+}
+
+void draw_mesh_textured(const std::vector<MeshData>& mesh_vec, GLuint texture, GLint v0) {
+	glUniform1i(sp->u("textureMap0"), v0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	draw_mesh(mesh_vec);
 }
 
 float speed_x = 0;
@@ -441,6 +446,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+	glUniform2f(sp->u("textureRoll"), 0,0);
 
 	glUniform1i(sp->u("textureMap1"), 1);
 	glActiveTexture(GL_TEXTURE1);
@@ -460,16 +466,18 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y, double deltaTim
 		okres_blysku -= deltaTime;
 	} 
 	
-
-
 	glUniform1f(sp->u("random"), random_blysk);
 
 	draw_mesh_textured(meshes_floor, texWulkan, 0);
 
 	glm::mat4 Mlava = glm::scale(M, glm::vec3(2.01)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mlava));
-	draw_mesh_textured(meshes_lava, texLava, 0);
 
+	glUniform2f(sp->u("textureRoll"), 0,tex_offset_counter*lava_tex_coords_offset_per_frame);
+	tex_offset_counter = std::max(tex_offset_counter+1, 60);
+	draw_mesh_textured(meshes_lava,texLava,0);
+
+	glUniform2f(sp->u("textureRoll"), 0,0);
 	glm::mat4 Mvolcano = glm::scale(M, glm::vec3(2)); // Adjust position if needed
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(Mvolcano));
 	draw_mesh_textured(meshes_vulkan, texWulkan, 0);
