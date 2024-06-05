@@ -67,7 +67,7 @@ GLuint texKostka;
 
 float random_blysk = 0;
 const double c_okres_blysku = 0.5f; // s
-const double c_czas_blysku = 0.1; //s 
+const double c_czas_blysku = 0.2; //s 
 double okres_blysku = c_okres_blysku; // s
 double czas_blysku = c_czas_blysku; //s 
 
