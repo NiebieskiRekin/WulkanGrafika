@@ -1,9 +1,11 @@
 Nagranie
 =======================
 
-<img width="630" height="300" src="https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4"></img>
 
-[link](https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4)
+https://github.com/NiebieskiRekin/WulkanGrafika/assets/107306041/f5887954-bef7-4371-95ab-0a03813cc999
+
+
+
 
 Instrukcja do projektu z Grafiki i Wizualizacji
 ========================
