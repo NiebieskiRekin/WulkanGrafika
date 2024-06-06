@@ -1,14 +1,6 @@
-<<<<<<< HEAD
-.vs/*
-=======
 .vs/* 
->>>>>>> 81d0417 (Start)
 assimp/*
 assimp-*
 glew/*
 glfw/*
 glm/*
-<<<<<<< HEAD
-=======
-
->>>>>>> 81d0417 (Start)
