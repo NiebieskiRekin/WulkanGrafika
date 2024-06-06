@@ -1,3 +1,7 @@
+Nagranie
+=======================
+![](assets/nagranie.mp4)
+
 Instrukcja do projektu z Grafiki i Wizualizacji
 ========================
 1. Sklonuj projekt `git clone https://github.com/NiebieskiRekin/WulkanGrafika.git` lub pobierz archiwum
