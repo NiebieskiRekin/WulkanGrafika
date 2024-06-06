@@ -1,6 +1,9 @@
 Nagranie
 =======================
-![](assets/nagranie.mp4)
+
+<video width="630" height="300" src="https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4"></video>
+
+[link](https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4)
 
 Instrukcja do projektu z Grafiki i Wizualizacji
 ========================
