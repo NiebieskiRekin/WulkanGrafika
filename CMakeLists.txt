@@ -1,5 +1,3 @@
-# Na bazie https://github.com/tgalaj/OpenGLSampleCmake/blob/master/CMakeLists.txt
-
 ### NIE DZIAŁA!!!
 
 CMAKE_MINIMUM_REQUIRED( VERSION 3.22 )
@@ -29,20 +27,20 @@ add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-# set(OpenGL_GL_PREFERENCE GLVND)
-# find_package(OpenGL REQUIRED)
+set(OpenGL_GL_PREFERENCE GLVND)
+find_package(OpenGL REQUIRED)
 
-# find_package(ASSIMP REQUIRED)
-# message(STATUS "Found ASSIMP in ${ASSIMP_INCLUDE_DIR}")
+find_package(ASSIMP REQUIRED)
+message(STATUS "Found ASSIMP in ${ASSIMP_INCLUDE_DIR}")
 
-# find_package(GLFW3 REQUIRED)
-# message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIR}")
+find_package(GLFW3 REQUIRED)
+message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIR}")
 
-# find_package(GLM REQUIRED)
-# message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
+find_package(GLM REQUIRED)
+message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
 
-# find_package(GLEW REQUIRED)
-# message(STATUS "Found GLEW in ${GLEW_INCLUDE_DIR}")
+find_package(GLEW REQUIRED)
+message(STATUS "Found GLEW in ${GLEW_INCLUDE_DIR}")
 
 
 set(LIBS ${GLFW3_LIBRARY} ${OPENGL_LIBRARY} GLAD ${CMAKE_DL_LIBS} ${ASSIMP_LIBRARY} STB_IMAGE)
