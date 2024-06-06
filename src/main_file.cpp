@@ -62,7 +62,6 @@ GLuint specWulkan;
 
 GLuint texLava;
 GLuint specLava;
-// GLuint texLavaLight;
 
 GLuint texNiebo;
 
@@ -129,7 +128,6 @@ void loadModel(std::string plik, std::vector<MeshData>& meshContainer)
 }
 
 void draw_mesh(const std::vector<MeshData>& mesh_vec){
-	// Draw first model
 	for (const MeshData& mesh : mesh_vec) {
 		glEnableVertexAttribArray(sp->a("vertex"));
 		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, mesh.vertices.data());
@@ -162,15 +160,9 @@ float speed_x = 0;
 float speed_y = 0;
 float aspectRatio = 1;
 
-// Camera settings
 
 
 glm::vec3 cameraPos = glm::vec3(0, 1, -5);
-bool firstMouse = true;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float lastX = 400.0f, lastY = 300.0f;
-float fov = 45.0f;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -241,11 +233,6 @@ void updateParticles(float deltaTime) {
 
 	float spread = 0.5f;
 	glm::vec3 maindir = glm::vec3(0.0f, 0.0f, 1.0f);
-	// Very bad way to generate a random direction; 
-	// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
-	// combined with some user-controlled parameters (main direction, spread, etc)
-	
-
 
 	// Very bad way to generate a random color
 	//ParticlesContainer[particleIndex].r = rand() % 256;
@@ -330,25 +317,6 @@ const glm::vec3 treepos[] = {
 	{-3.3,2.2,0.06},
 };
 
-//Odkomentuj, żeby rysować kostkę
-//float* vertices = myCubeVertices;
-//float* normals = myCubeNormals;
-//float* texCoords = myCubeTexCoords;
-//float* colors = myCubeColors;
-//int vertexCount = myCubeVertexCount;
-
-
-////Odkomentuj, żeby rysować czajnik
-//float* vertices = myTeapotVertices;
-//float* normals = myTeapotVertexNormals;
-//float* texCoords = myTeapotTexCoords;
-// float* colors = myTeapotColors;
-//int vertexCount = myTeapotVertexCount;
-
-
-
-
-
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
@@ -403,7 +371,6 @@ GLuint readTexture(const char* filename) {
 
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
 	glClearColor(0.1, 0.37, 0.37, 1);
 	glEnable(GL_DEPTH_TEST);
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -416,7 +383,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 	
 	texLava = readTexture("../assets/textures/mlawa.png");
 	specLava = readTexture("../assets/textures/mlawa_specular.png");
-	// texLavaLight = readTexture("../assets/textures/mlawa_lightmap.png");
 
 	texNiebo = readTexture("../assets/textures/sky.png");
 
@@ -441,7 +407,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 //Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
 
 	delete sp;
 
@@ -550,8 +515,7 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
-	window = glfwCreateWindow(1000, 1000, "OpenGL", NULL, NULL);  //Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
-
+	window = glfwCreateWindow(1000, 1000, "OpenGL", NULL, NULL);  
 	if (!window) //Jeżeli okna nie udało się utworzyć, to zamknij program
 	{
 		fprintf(stderr, "Nie można utworzyć okna.\n");
@@ -575,15 +539,16 @@ int main(void)
 	glfwSetTime(0); //Zeruj timer
 	while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
 	{
-		angle_x += speed_x * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-		// angle_y += speed_y * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
+		//Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
+		angle_x += speed_x * glfwGetTime(); 
+		// angle_y += speed_y * glfwGetTime(); 		
 		angle_y = std::min(std::max(angle_y+speed_y * (float)glfwGetTime(), glm::radians(-30.0f)), glm::radians(2.5f));
 
 		std::chrono::steady_clock::time_point currentTime =
 			std::chrono::steady_clock::now();
 		std::chrono::duration<float> deltaTimeDuration =
 			currentTime - lastUpdateTime;
-		double deltaTime = deltaTimeDuration.count(); // Convert duration to seconds
+		double deltaTime = deltaTimeDuration.count(); 
 		lastUpdateTime = currentTime;
 
 		glfwSetTime(0); //Zeruj timer
