@@ -1,7 +1,7 @@
 Nagranie
 =======================
 
-<video width="630" height="300" src="https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4"></video>
+<img width="630" height="300" src="https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4"></img>
 
 [link](https://github.com/NiebieskiRekin/WulkanGrafika/blob/main/assets/nagranie.mp4)
 
