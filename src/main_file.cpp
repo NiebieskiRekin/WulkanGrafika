@@ -446,6 +446,18 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	delete sp;
 
 	glDeleteTextures(1, &texWulkan);
+	glDeleteTextures(1, &texKostka);
+	glDeleteTextures(1, &texLava);
+	glDeleteTextures(1, &texNiebo);
+	glDeleteTextures(1, &texTree);
+	glDeleteTextures(1, &texRex);
+
+	glDeleteTextures(1, &specWulkan);
+	// glDeleteTextures(1, &specKostka);
+	glDeleteTextures(1, &specLava);
+	// glDeleteTextures(1, &texNiebo);
+	glDeleteTextures(1, &specTree);
+	glDeleteTextures(1, &specRex);
 }
 
 
